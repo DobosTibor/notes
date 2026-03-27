@@ -4,32 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Supabase Notes – mini projekt</title>
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen p-6">
 
-<body class="bg-gray-900 text-gray-100 min-h-screen flex justify-center p-6">
+  <div class="max-w-2xl mx-auto">
 
-  <div class="w-full max-w-2xl">
-
-    <h1 class="text-3xl font-bold mb-6">📝 Supabase Notes</h1>
+    <h1 class="text-3xl font-bold mb-6">📝 Supabase Notes – mini projekt</h1>
 
     <h2 class="text-xl mb-3 text-gray-300">Új jegyzet</h2>
-
-    <!-- FORM -->
     <form id="noteForm" class="grid gap-3 bg-gray-800 p-5 rounded-xl shadow-lg">
-      
       <input id="title" type="text" placeholder="Jegyzet címe" required
-        class="p-3 bg-gray-700 border border-gray-600 rounded-md text-white 
-        focus:outline-none focus:ring-2 focus:ring-white transition" />
-
+             class="p-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-white" />
       <textarea id="content" rows="5" placeholder="Jegyzet szövege..." required
-        class="p-3 bg-gray-700 border border-gray-600 rounded-md text-white 
-        focus:outline-none focus:ring-2 focus:ring-white transition"></textarea>
-
+                class="p-3 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-white"></textarea>
       <button type="submit"
-        class="bg-gray-700 hover:bg-white hover:text-black text-white font-bold py-2 rounded-md transition duration-300 shadow-md hover:shadow-[0_0_15px_rgba(255,255,255,0.8)]">
+              class="bg-gray-700 hover:bg-white hover:text-black text-white font-bold py-2 rounded-md transition duration-300 shadow-md hover:shadow-[0_0_10px_rgba(255,255,255,0.8)]">
         Mentés
       </button>
     </form>
@@ -37,7 +28,6 @@
     <hr class="my-8 border-gray-700" />
 
     <h2 class="text-xl mb-3 text-gray-300">Jegyzetek</h2>
-
     <div id="list">Betöltés...</div>
 
   </div>
@@ -58,44 +48,32 @@
     }
 
     async function loadNotes() {
-      listEl.innerHTML = "⏳ Betöltés...";
-
       const { data, error } = await supabaseClient
         .from("notes")
         .select("id, title, content, created_at")
         .order("created_at", { ascending: false });
 
       if (error) {
-        listEl.innerHTML = `<p class="text-red-400 font-bold">Hiba: ${escapeHtml(error.message)}</p>`;
+        listEl.innerHTML = '<p class="text-red-400 font-bold">Hiba a lekérdezéskor: ' + escapeHtml(error.message) + '</p>';
         return;
       }
 
       if (!data || data.length === 0) {
-        listEl.innerHTML = `<p class="text-gray-400 italic">Még nincs jegyzet.</p>`;
+        listEl.innerHTML = '<p class="text-gray-400 italic">Még nincs egyetlen jegyzet sem az adatbázisban.</p>';
         return;
       }
 
-      listEl.innerHTML = data.map(note => `
-        <div class="bg-gray-800 border border-gray-700 p-4 mb-4 rounded-xl shadow-md hover:shadow-lg transition">
-          
-          <h3 class="text-lg font-semibold mb-2 text-white">
-            ${escapeHtml(note.title)}
-          </h3>
-
-          <p class="mb-2 whitespace-pre-wrap text-gray-300">
-            ${escapeHtml(note.content)}
-          </p>
-
-          <small class="text-gray-500 block mb-3">
-            ${new Date(note.created_at).toLocaleString('hu-HU')}
-          </small>
-
-          <button onclick="deleteNote(${note.id})"
-            class="bg-gray-700 hover:bg-white hover:text-black text-white px-3 py-1 rounded transition duration-300 shadow hover:shadow-[0_0_10px_rgba(255,255,255,0.8)]">
-            Törlés
-          </button>
-        </div>
-      `).join("");
+      // Minimális változtatás: Tailwind class-ok a kártyákhoz
+      let html = "";
+      for (let i = 0; i < data.length; i++) {
+        let note = data[i];
+        html += '<div class="bg-gray-800 border border-gray-700 p-4 mb-4 rounded-xl shadow-md">' +
+                  '<h3 class="text-lg font-semibold mb-2 text-white">' + escapeHtml(note.title) + '</h3>' +
+                  '<p class="mb-2 whitespace-pre-wrap text-gray-300">' + escapeHtml(note.content) + '</p>' +
+                  '<small class="text-gray-500 block mb-3">Létrehozva: ' + new Date(note.created_at).toLocaleString('hu-HU') + '</small>' +
+                '</div>';
+      }
+      listEl.innerHTML = html;
     }
 
     form.addEventListener("submit", async (e) => {
@@ -103,36 +81,24 @@
 
       const title = document.getElementById("title").value.trim();
       const content = document.getElementById("content").value.trim();
-
       if (!title || !content) return;
 
       const btn = form.querySelector("button");
       btn.disabled = true;
-      btn.innerText = "Mentés...";
+      btn.innerText = "Mentés folyamatban...";
 
-      const { error } = await supabaseClient
-        .from("notes")
-        .insert([{ title, content }]);
+      const { error } = await supabaseClient.from("notes").insert([{ title, content }]);
 
       btn.disabled = false;
       btn.innerText = "Mentés";
 
       if (error) {
-        alert(error.message);
+        alert("Hiba történt a mentés során: " + error.message);
       } else {
         form.reset();
         loadNotes();
       }
     });
-
-    async function deleteNote(id) {
-      const { error } = await supabaseClient
-        .from("notes")
-        .delete()
-        .eq("id", id);
-
-      if (!error) loadNotes();
-    }
 
     loadNotes();
   </script>
