@@ -5,71 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Supabase Notes – mini projekt</title>
 
+  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 30px auto; padding: 0 20px; line-height: 1.6;">
 
-  <h1>📝 Supabase Notes – mini projekt</h1>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex justify-center p-6">
 
-  <h2>Új jegyzet</h2>
-  <form id="noteForm" style="display:grid; gap:10px; background: #f4f4f4; padding: 20px; border-radius: 8px;">
-    <input id="title" type="text" placeholder="Jegyzet címe" required style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;" />
-    <textarea id="content" placeholder="Jegyzet szövege..." rows="5" required style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
-    <button type="submit" style="padding: 10px; background: #3ecf8e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Mentés</button>
-  </form>
+  <div class="w-full max-w-2xl">
 
-  <hr style="margin: 40px 0;" />
+    <h1 class="text-3xl font-bold mb-6">📝 Supabase Notes</h1>
 
-  <h2>Jegyzetek</h2>
-  <div id="list">Betöltés...</div>
+    <h2 class="text-xl mb-3 text-gray-300">Új jegyzet</h2>
+
+    <!-- FORM -->
+    <form id="noteForm" class="grid gap-3 bg-gray-800 p-5 rounded-xl shadow-lg">
+      
+      <input id="title" type="text" placeholder="Jegyzet címe" required
+        class="p-3 bg-gray-700 border border-gray-600 rounded-md text-white 
+        focus:outline-none focus:ring-2 focus:ring-white transition" />
+
+      <textarea id="content" rows="5" placeholder="Jegyzet szövege..." required
+        class="p-3 bg-gray-700 border border-gray-600 rounded-md text-white 
+        focus:outline-none focus:ring-2 focus:ring-white transition"></textarea>
+
+      <button type="submit"
+        class="bg-gray-700 hover:bg-white hover:text-black text-white font-bold py-2 rounded-md transition duration-300 shadow-md hover:shadow-[0_0_15px_rgba(255,255,255,0.8)]">
+        Mentés
+      </button>
+    </form>
+
+    <hr class="my-8 border-gray-700" />
+
+    <h2 class="text-xl mb-3 text-gray-300">Jegyzetek</h2>
+
+    <div id="list">Betöltés...</div>
+
+  </div>
 
   <script>
-    // --- 1. KONFIGURÁCIÓ ---
-    // Ide másold be a Supabase Dashboard-on talált értékeket!
     const SUPABASE_URL = "https://nerfdbqqyxxwrpjwpdrb.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_-VrHTIsXyb2EgX0SrawEFg_7pi2_6cR";
 
-    // --- 2. KLIENS INICIALIZÁLÁSA ---
-    // JAVÍTVA: A paramétereknél nem szabad változónevet és egyenlőségjelet írni (pl. URL="...")
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const form = document.getElementById("noteForm");
     const listEl = document.getElementById("list");
 
-    // Biztonságos HTML kiíratás (XSS védelem)
     function escapeHtml(text) {
       const div = document.createElement("div");
       div.textContent = text ?? "";
       return div.innerHTML;
     }
 
-    // --- 3. JEGYZETEK BETÖLTÉSE ---
     async function loadNotes() {
+      listEl.innerHTML = "⏳ Betöltés...";
+
       const { data, error } = await supabaseClient
         .from("notes")
         .select("id, title, content, created_at")
         .order("created_at", { ascending: false });
 
       if (error) {
-        listEl.innerHTML = `<p style="color:red; font-weight:bold;">Hiba a lekérdezéskor: ${escapeHtml(error.message)}</p>`;
+        listEl.innerHTML = `<p class="text-red-400 font-bold">Hiba: ${escapeHtml(error.message)}</p>`;
         return;
       }
 
       if (!data || data.length === 0) {
-        listEl.innerHTML = `<p style="color: #666; font-style: italic;">Még nincs egyetlen jegyzet sem az adatbázisban.</p>`;
+        listEl.innerHTML = `<p class="text-gray-400 italic">Még nincs jegyzet.</p>`;
         return;
       }
 
       listEl.innerHTML = data.map(note => `
-        <div style="border:1px solid #ddd; padding:15px; margin-bottom:15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <h3 style="margin: 0 0 10px 0; color: #333;">${escapeHtml(note.title)}</h3>
-          <p style="margin: 0 0 10px 0; white-space: pre-wrap;">${escapeHtml(note.content)}</p>
-          <small style="color: #888;">Létrehozva: ${new Date(note.created_at).toLocaleString('hu-HU')}</small>
+        <div class="bg-gray-800 border border-gray-700 p-4 mb-4 rounded-xl shadow-md hover:shadow-lg transition">
+          
+          <h3 class="text-lg font-semibold mb-2 text-white">
+            ${escapeHtml(note.title)}
+          </h3>
+
+          <p class="mb-2 whitespace-pre-wrap text-gray-300">
+            ${escapeHtml(note.content)}
+          </p>
+
+          <small class="text-gray-500 block mb-3">
+            ${new Date(note.created_at).toLocaleString('hu-HU')}
+          </small>
+
+          <button onclick="deleteNote(${note.id})"
+            class="bg-gray-700 hover:bg-white hover:text-black text-white px-3 py-1 rounded transition duration-300 shadow hover:shadow-[0_0_10px_rgba(255,255,255,0.8)]">
+            Törlés
+          </button>
         </div>
       `).join("");
     }
 
-    // --- 4. ÚJ JEGYZET MENTÉSE ---
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
@@ -78,10 +106,9 @@
 
       if (!title || !content) return;
 
-      // Kikapcsoljuk a gombot, amíg tart a mentés
       const btn = form.querySelector("button");
       btn.disabled = true;
-      btn.innerText = "Mentés folyamatban...";
+      btn.innerText = "Mentés...";
 
       const { error } = await supabaseClient
         .from("notes")
@@ -91,15 +118,24 @@
       btn.innerText = "Mentés";
 
       if (error) {
-        alert("Hiba történt a mentés során: " + error.message);
+        alert(error.message);
       } else {
         form.reset();
-        loadNotes(); // Lista frissítése
+        loadNotes();
       }
     });
 
-    // Kezdeti betöltés
+    async function deleteNote(id) {
+      const { error } = await supabaseClient
+        .from("notes")
+        .delete()
+        .eq("id", id);
+
+      if (!error) loadNotes();
+    }
+
     loadNotes();
   </script>
+
 </body>
 </html>
